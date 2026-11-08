@@ -71,7 +71,7 @@ export function start({ from = 0 } = {}) {
   const S = STAGES[from];
   const sub = from > 0 ? '이어서 올라가요!' : (G.phy.noFill ? '어려움 모드 · 떨어지면 아래층까지 갈 수 있어요!' : G.phy.label + ' 모드 · 꼭대기까지 올라가자!');
   hud.banner('STAGE ' + (from + 1), S.name, sub);
-  music.stop(); music.setFloor(from); music.start(true);
+  sound.init(); music.stop(); music.setFloor(from); music.start(true);
 }
 function cont() {
   begin();
@@ -175,7 +175,9 @@ export function init() {
     onMusic: () => { sound.init(); toggleMusic(); },
   });
   hud.setMuteLabel(sound.muted); hud.setMusicLabel(music.enabled);
-  window.addEventListener('pointerdown', wakeAudio);
+  // audio can only start inside a user gesture; once it runs, start the music if a run is going (autoplay)
+  sound.onRunning = () => { if (G.state === 'play') music.start(); };
+  sound.unlockOnGesture();
   buildWorld(G.diff); snapCamera(G.sim.P); renderStart(); hud.showOv('ovStart');
 }
 

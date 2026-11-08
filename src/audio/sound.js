@@ -8,12 +8,33 @@ const near = (d, r = 9) => Math.max(0, 1 - d / r);
 export const sound = {
   ctx: null, out: null, muted: prefs.muted,
 
+  onRunning: null, // called once audio is actually running (the game starts the music then)
+
   init() {
-    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
     try {
       const C = window.AudioContext || window.webkitAudioContext; this.ctx = new C();
       this.out = this.ctx.createGain(); this.out.gain.value = this.muted ? 0 : .5; this.out.connect(this.ctx.destination);
+      this.ctx.addEventListener('statechange', () => { if (this.ctx.state === 'running' && this.onRunning) this.onRunning(); });
+      if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+      // a silent blip: Safari / iOS only unlock audio once something plays inside a gesture
+      const b = this.ctx.createBuffer(1, 1, this.ctx.sampleRate), s = this.ctx.createBufferSource();
+      s.buffer = b; s.connect(this.ctx.destination); s.start(0);
     } catch (e) { this.ctx = null; }
+  },
+
+  /**
+   * Browsers only allow audio to start inside certain user gestures, and which ones
+   * differs (Chrome: pointer down, Safari / touch: click or touch end). Try on all of
+   * them until audio is really running, then stop listening.
+   */
+  unlockOnGesture() {
+    const EV = ['pointerdown', 'pointerup', 'click', 'touchend', 'keydown'];
+    const h = () => {
+      this.init();
+      if (this.ctx && this.ctx.state === 'running') EV.forEach(e => window.removeEventListener(e, h, true));
+    };
+    EV.forEach(e => window.addEventListener(e, h, true));
   },
   get live() { return this.ctx && this.ctx.state === 'running' && !this.muted; },
 
