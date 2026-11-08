@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { scene } from './renderer.js';
 import { TX, FLOOR_TEX } from './textures.js';
-import { MAT, FADED, lam, moverMat, moverFaded, coneGeo, coneMat, coneWarn, ballGeo, coreGeo, ballMat, coreMat, SHARED_GEO } from './materials.js';
+import { MAT, FADED, lam, moverMat, moverFaded, coneGeo, coneMat, coneWarn, coneFaded, coneWarnFaded, ballGeo, coreGeo, ballMat, coreMat, SHARED_GEO } from './materials.js';
 import { blockAO, cubeGeo, slabGeo } from './blockGeo.js';
 import { spikeState } from '../world/sim.js';
 import { isPillar } from '../world/ring.js';
@@ -66,7 +66,7 @@ export function buildTowerMesh(tower) {
     const g = new THREE.Group();
     for (const [ox, oz] of [[-.25, -.25], [.25, -.25], [-.25, .25], [.25, .25]]) { const c = new THREE.Mesh(coneGeo, coneMat); c.castShadow = true; c.position.set(ox, 0, oz); g.add(c); }
     g.position.set(sp.i - 4.5, sp.y + 1 - .55, sp.j - 4.5); group.add(g);
-    return { obj: g, off: -.55 };
+    return { obj: g, off: -.55, st: 0, block: meshAt.get(key(sp.i, sp.y, sp.j)) };
   });
   const launchers = tower.fires.map(e => meshAt.get(key(e.i, e.y, e.j)));
 
@@ -82,8 +82,7 @@ export function syncTower(sim, dt) {
     const target = st === 0 ? -.55 : (st === 1 ? -.36 + Math.sin(t * 40) * .03 : 0);
     v.off += (target - v.off) * Math.min(1, dt * (st === 2 ? 30 : 10));
     v.obj.position.y = sp.y + 1 + v.off;
-    const mat = st === 1 ? coneWarn : coneMat;
-    if (v.obj.children[0].material !== mat) v.obj.children.forEach(c => c.material = mat);
+    v.st = st; setSpikeMat(v);
   });
   // launchers swell just before they fire
   V.launchers.forEach((mesh, k) => { if (mesh) mesh.scale.setScalar(sim.fireNext[k] - t < .35 ? 1.08 : 1); });
@@ -100,6 +99,13 @@ export function syncTower(sim, dt) {
   });
   TX.lava.offset.y = (t * .12) % 1;
   V.trophy.rotation.y += dt * 1.5; V.trophy.position.y = T.TOP + 2.6 + Math.sin(t * 2) * .2;
+}
+
+/** Spike colour (red while warning), see-through when its block is faded. */
+function setSpikeMat(v) {
+  const faded = !!(v.block && v.block.userData.faded);
+  const mat = v.st === 1 ? (faded ? coneWarnFaded : coneWarn) : (faded ? coneFaded : coneMat);
+  if (v.obj.children[0].material !== mat) v.obj.children.forEach(c => c.material = mat);
 }
 
 /** Makes blocks and floors between the camera and the player see-through. */
@@ -119,6 +125,7 @@ export function fadeOccluders(camera, P, sim, dt) {
     const f = blocks(u.cx, u.cy, u.cz);
     if (f !== u.faded) { u.faded = f; m.material = f ? FADED[u.t] : MAT[u.t]; }
   }
+  V.spikes.forEach(setSpikeMat);
   V.movers.forEach((mesh, k) => {
     const f = blocks(sim.mx[k], V.tower.movers[k].y + .5, sim.mz[k]);
     if (f !== mesh.userData.faded) { mesh.userData.faded = f; mesh.material = f ? moverFaded : moverMat; }

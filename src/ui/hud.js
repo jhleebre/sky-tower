@@ -32,6 +32,7 @@ export function updateHud(stage, stageName, time, deaths, pct, phy) {
   $('dTag').textContent = phy.label; $('dTag').style.background = phy.color;
 }
 export function setViewLabel(label) { $('viewBtn').textContent = label; }
+export function setMusicLabel(on) { const b = $('musicBtn'); b.textContent = on ? '음악 켬' : '음악 끔'; b.setAttribute('aria-pressed', on); }
 export function setMuteLabel(muted) { const b = $('muteBtn'); b.textContent = muted ? '소리 끔' : '소리 켬'; b.setAttribute('aria-pressed', !muted); }
 
 /* ---------- cards ---------- */
@@ -52,12 +53,13 @@ export function showWin({ msg, time, deaths, bestLine }) {
   showOv('ovWin'); $('againBtn').focus();
 }
 
-/** Wires the static buttons. h: {onDiff(d), onMenu, onView, onMute, onResume, onToCp, onRestart, onHome, onAgain} */
+/** Wires the static buttons. h: {onDiff(d), onMenu, onView, onMute, onMusic, onResume, onToCp, onRestart, onHome, onAgain} */
 export function bindHud(h) {
   $('diffSeg').querySelectorAll('button').forEach(b => b.onclick = () => h.onDiff(b.dataset.d));
   $('menuBtn').onclick = h.onMenu;
   $('viewBtn').onclick = e => { h.onView(); e.currentTarget.blur(); };
   $('muteBtn').onclick = e => { h.onMute(); e.currentTarget.blur(); };
+  $('musicBtn').onclick = e => { h.onMusic(); e.currentTarget.blur(); };
   $('resumeBtn').onclick = h.onResume;
   $('toCpBtn').onclick = h.onToCp;
   $('restartBtn').onclick = h.onRestart;

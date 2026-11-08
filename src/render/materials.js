@@ -22,6 +22,9 @@ export const moverMat = lam(TX.mover), moverFaded = fadedOf(moverMat);
 
 export const coneGeo = new THREE.ConeGeometry(.11, .5, 6); coneGeo.translate(0, .25, 0);
 export const coneMat = new THREE.MeshLambertMaterial({ color: '#e6e9f2' }), coneWarn = new THREE.MeshLambertMaterial({ color: '#ff6a6a' });
+// spikes fade together with the block they stand on
+export const coneFaded = fadedOf(coneMat), coneWarnFaded = fadedOf(coneWarn);
+coneFaded.transparent = coneWarnFaded.transparent = true;
 export const ballGeo = new THREE.SphereGeometry(FIRE_R, 12, 10), coreGeo = new THREE.SphereGeometry(FIRE_R * .55, 8, 6);
 export const ballMat = new THREE.MeshBasicMaterial({ color: '#ff7a2f' }), coreMat = new THREE.MeshBasicMaterial({ color: '#ffe066' });
 /** Geometries shared by every tower build (never disposed). */

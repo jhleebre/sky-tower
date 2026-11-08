@@ -9,6 +9,7 @@ import { buildTowerMesh } from './render/towerMesh.js';
 import { burst, dust, splash, sparkleRing, firework } from './render/effects.js';
 import { squash } from './render/player.js';
 import { sound } from './audio/sound.js';
+import { music } from './audio/music.js';
 import { snapCamera, VIEWS, VIEW_ORDER } from './render/cameraRig.js';
 import { KEYMAP, touch, bindInput } from './ui/input.js';
 import * as hud from './ui/hud.js';
@@ -46,7 +47,7 @@ const events = {
   pop: b => { burst(b.x, b.y, b.z, '#ff9f4d', 6); sound.pop(distTo(b.x, b.y, b.z)); },
   reach: f => {
     const P = G.sim.P; burst(P.x, P.y + .5, P.z, '#ffd23f'); sparkleRing(P.x, P.y, P.z); sound.checkpoint();
-    if (f.type !== 'goal') { const S = STAGES[f.stage]; hud.banner('STAGE ' + (f.stage + 1), S.name, S.hint); }
+    if (f.type !== 'goal') { music.setFloor(f.stage); const S = STAGES[f.stage]; hud.banner('STAGE ' + (f.stage + 1), S.name, S.hint); }
   },
   win,
 };
@@ -70,17 +71,19 @@ export function start({ from = 0 } = {}) {
   const S = STAGES[from];
   const sub = from > 0 ? '이어서 올라가요!' : (G.phy.noFill ? '어려움 모드 · 떨어지면 아래층까지 갈 수 있어요!' : G.phy.label + ' 모드 · 꼭대기까지 올라가자!');
   hud.banner('STAGE ' + (from + 1), S.name, sub);
+  music.stop(); music.setFloor(from); music.start(true);
 }
 function cont() {
   begin();
   const c = Math.min(curCp(G.sim), STAGES.length - 1);
   hud.banner('STAGE ' + (c + 1), STAGES[c].name, '이어서 올라가요!');
+  music.setFloor(G.sim.cp); music.start();
 }
-function pause() { G.state = 'paused'; hud.showPause(G.phy.noFill); }
-function resume() { G.state = 'play'; hud.showOv(null); }
+function pause() { G.state = 'paused'; hud.showPause(G.phy.noFill); music.stop(); }
+function resume() { G.state = 'play'; hud.showOv(null); music.start(); }
 
 export function goHome() {
-  G.state = 'menu'; hud.hideBanner(); killBalls(G.sim);
+  G.state = 'menu'; hud.hideBanner(); killBalls(G.sim); music.stop();
   renderStart(); hud.showOv('ovStart');
 }
 
@@ -91,7 +94,7 @@ function win() {
   const nb = record && (best == null || s.time < best);
   if (nb) { best = s.time; setBest(G.diff, best); }
   const P = s.P;
-  sound.win();
+  music.stop(); sound.win();
   const cols = ['#ffd23f', '#3ee0a1', '#ff70a6', '#4f9dff', '#ffffff', '#ff9f4d'];
   for (let i = 0; i < 8; i++) setTimeout(() => {
     const a = i * 2.4;
@@ -128,10 +131,14 @@ function cycleView() { setView(VIEW_ORDER[(VIEW_ORDER.indexOf(G.view) + 1) % VIE
 
 /* ---------- input ---------- */
 function toggleMute() { hud.setMuteLabel(sound.toggleMute()); }
+function toggleMusic() { hud.setMusicLabel(music.toggle(G.state === 'play')); }
+/** First gesture: start audio, and the music if a run (e.g. autoplay) is already going. */
+function wakeAudio() { sound.init(); if (G.state === 'play') music.start(); }
 
 function onKeyDown(e) {
-  sound.init();
+  wakeAudio();
   if (e.code === 'KeyM' && !e.repeat) { toggleMute(); return; }
+  if (e.code === 'KeyN' && !e.repeat) { toggleMusic(); return; }
   if (e.code === 'Escape' || e.code === 'KeyP') {
     if (G.pilot) { if (G.pilotStop) G.pilotStop(); return; }
     if (G.state === 'play') pause(); else if (G.state === 'paused') resume();
@@ -165,9 +172,10 @@ export function init() {
     onResume: resume, onToCp: () => { respawn(G.sim); snapCamera(G.sim.P); resume(); },
     onRestart: () => start(), onHome: goHome, onAgain: () => start(),
     onMute: () => { sound.init(); toggleMute(); },
+    onMusic: () => { sound.init(); toggleMusic(); },
   });
-  hud.setMuteLabel(sound.muted);
-  window.addEventListener('pointerdown', () => sound.init());
+  hud.setMuteLabel(sound.muted); hud.setMusicLabel(music.enabled);
+  window.addEventListener('pointerdown', wakeAudio);
   buildWorld(G.diff); snapCamera(G.sim.P); renderStart(); hud.showOv('ovStart');
 }
 

@@ -28,4 +28,6 @@ export const prefs = {
   set view(v) { LS.set(P + 'view', v); },
   get muted() { return LS.get(P + 'mute', false); },
   set muted(v) { LS.set(P + 'mute', v); },
+  get music() { return LS.get(P + 'music', true); },
+  set music(v) { LS.set(P + 'music', v); },
 };
