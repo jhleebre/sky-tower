@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Tower check</title>
+<style>body{background:#0b0d22;color:#e8ebff;font:14px/1.5 ui-monospace,Menlo,monospace;padding:16px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<p>Checking the tower layouts and climbing every difficulty with the game's physics… (add <code>?diff=easy,hard</code> for specific ones)</p>
+<pre id="out"></pre>
+<script type="module">
+import { DIFFS } from '../src/config.js';
+import { checkTower } from './tower-check.js';
+
+const out = document.getElementById('out');
+const q = new URLSearchParams(location.search).get('diff');
+const list = q ? q.split(',').filter(d => DIFFS.includes(d)) : DIFFS;
+const log = line => { out.textContent += line + '\n'; };
+// One difficulty per tick so the page shows progress (layouts are checked with the first)
+(async () => {
+  let failed = 0;
+  for (let n = 0; n < list.length; n++) {
+    await new Promise(r => setTimeout(r, 0));
+    failed += checkTower([list[n]], n === 0 ? log : line => { if (!line.includes('layout')) log(line); });
+  }
+  out.textContent += failed ? `\n${failed} problem(s) found` : '\nAll checks passed.';
+  document.title = failed ? 'Tower check: FAILED' : 'Tower check: OK';
+  window.__check = { done: true, failed };
+})();
+</script>
+</body>
+</html>

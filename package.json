@@ -1,0 +1,10 @@
+{
+  "name": "sky-tower-3d",
+  "private": true,
+  "description": "하늘끝 탑 3D — block tower climbing game for the browser",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tools/check-tower.mjs"
+  }
+}
